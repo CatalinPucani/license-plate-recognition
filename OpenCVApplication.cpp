@@ -506,7 +506,7 @@ int* makeHistogram(Mat src)
 Mat auto_threshold(Mat img) {
 	float mg1 = 0, mg2 = 0;
 	int N1 = 0, N2 = 0;
-	float error=0.1;
+	float error=0.15;
 	Mat dst;
 	dst = Mat(img.rows, img.cols, CV_8UC1);
 	int* histogram = makeHistogram(img);
@@ -669,16 +669,28 @@ Mat sablon_filtru_ideal_high_pass(Mat src) {
 
 Mat getS()
 {
+	Mat S(7, 7, CV_8UC1);
+	for (int i = 0; i < 7; i++) {
+		for (int j = 0; j < 7; j++) {
+			S.at<uchar>(i, j) = 1;
+		}
+	}
+
+	return S;
+}
+
+Mat getS2()
+{
 	Mat S(3, 3, CV_8UC1);
-	S.at<uchar>(0, 0) = 0;
+	S.at<uchar>(0, 0) = 1;
 	S.at<uchar>(0, 1) = 1;
-	S.at<uchar>(0, 2) = 0;
+	S.at<uchar>(0, 2) = 1;
 	S.at<uchar>(1, 0) = 1;
 	S.at<uchar>(1, 1) = 1;
 	S.at<uchar>(1, 2) = 1;
-	S.at<uchar>(2, 0) = 0;
+	S.at<uchar>(2, 0) = 1;
 	S.at<uchar>(2, 1) = 1;
-	S.at<uchar>(2, 2) = 0;
+	S.at<uchar>(2, 2) = 1;
 
 	return S;
 }
@@ -694,6 +706,45 @@ Mat dilatare(Mat src, int N) {
 	int w = 3;
 
 	Mat S = getS();
+
+	for (int k = 0; k < N; k++) {
+		for (int i = 0; i < src.rows; i++) {
+			for (int j = 0; j < src.cols; j++) {
+				if (src.at<uchar>(i, j) == 0) {
+					for (int x = 0; x < S.rows; x++) {
+						for (int y = 0; y < S.cols; y++) {
+							if (S.at<uchar>(x, y) == 1) {
+								int auxx = i + x - (S.rows / 2);
+								int auxy = j + y - (S.cols / 2);
+								if (isInside(src, auxx, auxy)) {
+									dst.at<uchar>(auxx, auxy) = 0;
+								}
+							}
+
+						}
+					}
+				}
+			}
+		}
+		src = dst.clone();
+	}
+
+	//imshow("dilatare", dst);
+
+	return dst;
+}
+
+Mat dilatareMica(Mat src, int N) {
+
+	Mat dst = Mat(src.size(), CV_8UC1);
+
+	char fname[MAX_PATH];
+
+
+	dst = src.clone();
+	int w = 3;
+
+	Mat S = getS2();
 
 	for (int k = 0; k < N; k++) {
 		for (int i = 0; i < src.rows; i++) {
@@ -757,20 +808,61 @@ Mat eroziune(Mat src, int N) {
 		src = dst.clone();
 	}
 
+	//imshow("eroziune", src);
 	//imshow("eroziune", dst);
 
 	return dst;
 }
 
-Mat deschidere(Mat src, int N) {
+Mat eroziuneMica(Mat src, int N) {
+	Mat dst = Mat(src.size(), CV_8UC1);
+	char fname[MAX_PATH];
+
+
+	dst = src.clone();
+	int w = 3;
+
+	Mat S = getS2();
+
+	bool whiteFlag = false;
+
+	for (int n = 0; n < N; n++) {
+		for (int i = 0; i < src.rows; i++) {
+			for (int j = 0; j < src.cols; j++) {
+				if (src.at<uchar>(i, j) == 0) {
+					for (int x = 0; x < S.rows; x++) {
+						for (int y = 0; y < S.cols; y++) {
+							int auxx = i + x - (S.rows / 2);
+							int auxy = j + y - (S.cols / 2);
+							if (isInside(src, auxx, auxy) && S.at<uchar>(x, y) == 1 && src.at<uchar>(auxx, auxy) == 255) {
+								dst.at<uchar>(i, j) = 255;
+							}
+
+						}
+					}
+
+				}
+			}
+		}
+		src = dst.clone();
+	}
+
+	//imshow("eroziune", src);
+	//imshow("eroziune", dst);
+
+	return dst;
+}
+
+Mat inchidere(Mat src, int N) {
 
 	//Mat dst = src.clone();
 	//dst = convertToBlackAndWhiteSrc(src);
 
 	Mat dst;
 	for (int k = 0; k < N; k++) {
-		dst = eroziune(src, 1);
-		dst = dilatare(dst, 1);
+		dst = dilatareMica(src, 1);
+		dst = eroziuneMica(dst, 1);
+		
 		
 	}
 
@@ -824,6 +916,77 @@ Mat maximumFilter(Mat img)
 		return dst;
 }
 
+Mat diff(Mat A, Mat B)
+{
+	Mat dst = Mat(A.size(), CV_8UC1);
+
+	for (int i = 0; i < A.rows; i++)
+	{
+		for (int j = 0; j < A.cols; j++)
+		{
+			if ((A.at<uchar>(i, j) == 0) && (B.at<uchar>(i, j) != 0))
+			{
+				dst.at<uchar>(i, j) = 0;
+			}
+			else
+			{
+				dst.at<uchar>(i, j) = 255;
+			}
+		}
+	}
+	return dst;
+}
+
+Mat getContours(Mat src)
+{
+	Mat S = getS();
+
+	Mat  intermediate, dst;
+
+
+		//double t = (double)getTickCount(); // Get the current time [s]
+		//src = imread(fname, IMREAD_GRAYSCALE);
+
+		intermediate = eroziune(src, 1);
+
+		dst = diff(src, intermediate);
+
+		// Get the current time again and compute the time difference [s]
+		//t = ((double)getTickCount() - t) / getTickFrequency();
+		// Print (in the console window) the processing time in [ms] 
+		//printf("Time = %.3f [ms]\n", t * 1000);
+
+		//imshow("src", src);
+		//imshow("dst", dst);
+
+		return dst;
+}
+
+Mat negative_image(Mat img) 
+{		
+	Mat dst = Mat(img.rows, img.cols, CV_8UC1);
+
+	for (int i = 0; i < img.rows; i++)
+		for (int j = 0; j < img.cols; j++) {
+			int gin = img.at<uchar>(i, j);
+			int gout = 255 - gin;
+			if (gout < 0)
+				gout = 0;
+			if (gout > 255)
+				gout = 255;
+
+			dst.at<uchar>(i, j) = gout;
+		}
+
+	int* histogram_before = makeHistogram(img);
+	int* histogram_after = makeHistogram(dst);
+
+	//showHistogram("Before", histogram_before, 256, 200);
+	//showHistogram("After", histogram_after, 256, 200);
+
+	return dst;
+}
+
 void getLicensePlate()
 {
 
@@ -835,11 +998,24 @@ void getLicensePlate()
 		src = imread(fname, IMREAD_GRAYSCALE);
 
 		Mat intermediate1 = Gaussian2D(src, 2);
-		Mat intermediate2 = sablon_filtru_ideal_high_pass(intermediate1);
-		Mat intermediate3 = auto_threshold(intermediate2);
-		Mat intermediate4 = deschidere(intermediate3, 1);
+		Mat intermediate2 = auto_threshold(intermediate1);
 
-		dst = maximumFilter(intermediate4);
+		Mat intermediate3 = getContours(intermediate2);
+
+		//Mat intermediate2 = sablon_filtru_ideal_high_pass(intermediate1);
+
+		//imshow("int3", intermediate3);
+
+		//Mat intermediate3 = auto_threshold(intermediate2);
+
+		Mat intermediate4 = negative_image(intermediate3);
+
+		//imshow("int4", intermediate4);
+
+		Mat intermediate5 = inchidere(intermediate4, 1);
+
+		//dst = maximumFilter(intermediate4);
+		dst = intermediate5;
 
 		// Get the current time again and compute the time difference [s]
 		//t = ((double)getTickCount() - t) / getTickFrequency();
