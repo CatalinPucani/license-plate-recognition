@@ -215,7 +215,15 @@ def Canny_detector(img, weak_th=None, strong_th=None):
     return mag
 
 
-img = cv.imread('./images/numere - 7.jpg')
+#img = cv.imread('./images/numere-1.jpeg')
+
+img = cv.imread('./images/numere-2.jpg')
+
+#img = cv.imread('./images/numere-3.jpg')
+
+#img = cv.imread('./images/numere-4.jpg')
+
+#img = cv.imread('./images/numere-7.jpg')
 
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)  # convert to grey scale
 print("Grayscale - finished")
@@ -240,14 +248,20 @@ for c in contours:
     # approximate the contour
     peri = cv.arcLength(c, True)
     approx = cv.approxPolyDP(c, 0.018 * peri, True)
-    cv.drawContours(img, [approx], -1, (0, 0, 255), 3)
+    #cv.drawContours(img, [approx], -1, (0, 0, 255), 3)
     # if our approximated contour has four points, then
     # we can assume that we have found our screen
-    if len(approx) == 4:
+    x,y,w,h = cv.boundingRect(approx)
+    aspect_ratio = float(w)/h
+    if (len(approx) == 4):
+        print(aspect_ratio)
         screenCnt = approx
         break
 
-cv.drawContours(img, [screenCnt], -1, (0, 0, 255), 3)
+if (screenCnt is not None):
+    cv.drawContours(img, [screenCnt], -1, (0, 0, 255), 3)
+else:
+    print("Eroare!")
 
 mask = np.zeros(gray.shape,np.uint8)
 new_image = cv.drawContours(mask,[screenCnt],0,255,-1,)
@@ -259,6 +273,7 @@ new_image = cv.bitwise_and(img,img,mask=mask)
 Cropped = gray[topx:bottomx+1, topy:bottomy+1]
 
 text = pytesseract.image_to_string(Cropped, config='--psm 7')
+text = ''.join(filter(lambda x : x.isalpha() or x.isdigit(), text))
 print("Detected license plate number is:",text)
 img = cv.resize(img,(500,300))
 Cropped = cv.resize(Cropped,(400,200))
