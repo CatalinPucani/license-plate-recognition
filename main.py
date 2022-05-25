@@ -215,15 +215,15 @@ def Canny_detector(img, weak_th=None, strong_th=None):
     return mag
 
 
-#img = cv.imread('./images/numere-1.jpeg')
+#img = cv.imread('./images/numere-1.jpg')
 
-img = cv.imread('./images/numere-2.jpg')
+#img = cv.imread('./images/numere-2.jpg')
 
 #img = cv.imread('./images/numere-3.jpg')
 
 #img = cv.imread('./images/numere-4.jpg')
 
-#img = cv.imread('./images/numere-7.jpg')
+img = cv.imread('./images/numere-7.jpg')
 
 gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)  # convert to grey scale
 print("Grayscale - finished")
